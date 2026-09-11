@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.log
+.agent/sessions/
+.agent/context/cache/
+.DS_Store
+coverage/

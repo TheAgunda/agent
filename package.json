@@ -1,0 +1,37 @@
+{
+  "name": "@local/agent",
+  "version": "0.1.0",
+  "description": "A CLI-based autonomous coding agent designed to run primarily with local/open-source LLMs (Qwen3, Llama, etc.) via Ollama, llama.cpp, vLLM, or any OpenAI-compatible endpoint.",
+  "type": "module",
+  "bin": {
+    "agent": "./dist/cli/index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli/index.ts",
+    "start": "node dist/cli/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "ignore": "^5.3.2",
+    "inquirer": "^10.2.2",
+    "js-yaml": "^4.1.0",
+    "ora": "^8.1.0",
+    "simple-git": "^3.27.0"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^9.0.7",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.7.5",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.2"
+  }
+}
