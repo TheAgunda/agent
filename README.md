@@ -38,6 +38,8 @@ agent run "Add input validation to the signup endpoint and write tests for it"
 No local model handy? Point it at OpenAI or any other compatible endpoint:
 
 ```bash
+chmod +x dist/cli/index.js
+agent --help
 agent init                       # choose provider "openai", model "gpt-4o-mini" (or similar)
 export OPENAI_API_KEY=sk-...
 agent run "..."
