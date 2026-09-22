@@ -1,0 +1,52 @@
+model:
+  provider: ollama
+  name: qwen2.5:7b
+  baseUrl: http://localhost:11434/v1
+  temperature: 0.2
+  maxTokens: 4096
+  contextWindow: 100000
+agent:
+  maxIterations: 50
+  autoTest: true
+  autoFix: true
+  autoLint: false
+  contextLimit: 100000
+  maxRetriesPerTask: 3
+  planningEnabled: true
+permissions:
+  mode: ask
+  allowEditOutsideProject: false
+  blockedCommands:
+    - rm -rf /
+    - rm -rf /*
+    - rm -rf ~
+    - mkfs
+    - ':(){ :|:& };:'
+    - dd if=/dev/zero
+    - shutdown
+    - reboot
+    - sudo rm
+    - chmod -R 777 /
+    - curl | sh
+    - wget | sh
+  requireConfirmationFor:
+    - install_dependency
+    - delete_file
+    - run_command
+    - git_commit
+commands: {}
+memory:
+  enabled: true
+  maxEntries: 200
+ignore:
+  - node_modules
+  - dist
+  - build
+  - .git
+  - .agent
+  - '*.lock'
+  - coverage
+  - .next
+  - .venv
+  - __pycache__
+  - '*.pyc'

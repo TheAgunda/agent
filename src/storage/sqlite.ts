@@ -1,0 +1,32 @@
+import Database from "better-sqlite3";
+import fs from "node:fs";
+import path from "node:path";
+import { projectAgentDir } from "../config/loader.js";
+export class SQLiteDatabase {
+  private readonly db: Database.Database;
+  constructor(projectRoot: string) {
+    const agentDir = projectAgentDir(projectRoot);
+    fs.mkdirSync(agentDir, { recursive: true });
+    const dbPath = path.join(agentDir, "agent.db");
+    this.db = new Database(dbPath);
+    this.configure();
+    this.migrate();
+  }
+  private configure(): void {
+    this.db.pragma("journal_mode = WAL");
+    this.db.pragma("foreign_keys = ON");
+    this.db.pragma("busy_timeout = 5000");
+    this.db.pragma("synchronous = NORMAL");
+  }
+  private migrate(): void {
+    this.db.exec(
+      ` CREATE TABLE IF NOT EXISTS schema_migrations ( version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL ); CREATE TABLE IF NOT EXISTS projects ( id TEXT PRIMARY KEY, name TEXT NOT NULL, root_path TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL, updated_at TEXT NOT NULL ); CREATE TABLE IF NOT EXISTS sessions ( id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT, status TEXT NOT NULL DEFAULT 'active', provider TEXT, model TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE ); CREATE TABLE IF NOT EXISTS messages ( id TEXT PRIMARY KEY, session_id TEXT NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, provider TEXT, model TEXT, input_tokens INTEGER, output_tokens INTEGER, metadata TEXT, created_at TEXT NOT NULL, FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE ); CREATE TABLE IF NOT EXISTS plans ( id TEXT PRIMARY KEY, project_id TEXT NOT NULL, session_id TEXT, goal TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active', created_at TEXT NOT NULL, updated_at TEXT NOT NULL, FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE, FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE SET NULL ); CREATE TABLE IF NOT EXISTS tasks ( id TEXT PRIMARY KEY, plan_id TEXT NOT NULL, task_index INTEGER NOT NULL, description TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', notes TEXT, started_at TEXT, completed_at TEXT, attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE CASCADE, UNIQUE(plan_id, task_index) ); CREATE TABLE IF NOT EXISTS task_dependencies ( task_id TEXT NOT NULL, depends_on_task_id TEXT NOT NULL, PRIMARY KEY ( task_id, depends_on_task_id ), FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE, FOREIGN KEY (depends_on_task_id) REFERENCES tasks(id) ON DELETE CASCADE ); CREATE TABLE IF NOT EXISTS task_runs ( id TEXT PRIMARY KEY, task_id TEXT NOT NULL, attempt INTEGER NOT NULL, status TEXT NOT NULL, command TEXT, output TEXT, error TEXT, started_at TEXT NOT NULL, completed_at TEXT, FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE ); CREATE TABLE IF NOT EXISTS tool_calls ( id TEXT PRIMARY KEY, session_id TEXT, task_id TEXT, tool_name TEXT NOT NULL, input TEXT, output TEXT, error TEXT, status TEXT NOT NULL, started_at TEXT NOT NULL, completed_at TEXT, FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE SET NULL, FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL ); CREATE TABLE IF NOT EXISTS context_items ( id TEXT PRIMARY KEY, project_id TEXT NOT NULL, session_id TEXT, type TEXT NOT NULL, content TEXT NOT NULL, source TEXT, metadata TEXT, created_at TEXT NOT NULL, FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE, FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE SET NULL ); CREATE TABLE IF NOT EXISTS file_index ( id TEXT PRIMARY KEY, project_id TEXT NOT NULL, path TEXT NOT NULL, hash TEXT, size INTEGER, mime_type TEXT, indexed_at TEXT NOT NULL, UNIQUE(project_id, path), FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE ); CREATE TABLE IF NOT EXISTS file_chunks ( id TEXT PRIMARY KEY, file_id TEXT NOT NULL, chunk_index INTEGER NOT NULL, content TEXT NOT NULL, token_count INTEGER, metadata TEXT, FOREIGN KEY (file_id) REFERENCES file_index(id) ON DELETE CASCADE, UNIQUE(file_id, chunk_index) ); CREATE TABLE IF NOT EXISTS permissions ( id TEXT PRIMARY KEY, project_id TEXT NOT NULL, tool_name TEXT NOT NULL, permission TEXT NOT NULL, pattern TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE ); CREATE TABLE IF NOT EXISTS agent_events ( id INTEGER PRIMARY KEY AUTOINCREMENT, project_id TEXT NOT NULL, session_id TEXT, plan_id TEXT, task_id TEXT, event_type TEXT NOT NULL, payload TEXT, created_at TEXT NOT NULL, FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE, FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE SET NULL, FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE SET NULL, FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL ); CREATE TABLE IF NOT EXISTS usage ( id INTEGER PRIMARY KEY AUTOINCREMENT, project_id TEXT NOT NULL, session_id TEXT, provider TEXT, model TEXT, input_tokens INTEGER DEFAULT 0, output_tokens INTEGER DEFAULT 0, estimated_cost REAL, created_at TEXT NOT NULL, FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE, FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE SET NULL ); CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project_id); CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, created_at); CREATE INDEX IF NOT EXISTS idx_plans_project ON plans(project_id, created_at); CREATE INDEX IF NOT EXISTS idx_tasks_plan ON tasks(plan_id, task_index); CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(plan_id, status); CREATE INDEX IF NOT EXISTS idx_task_runs_task ON task_runs(task_id, attempt); CREATE INDEX IF NOT EXISTS idx_tool_calls_session ON tool_calls(session_id, started_at); CREATE INDEX IF NOT EXISTS idx_tool_calls_task ON tool_calls(task_id, started_at); CREATE INDEX IF NOT EXISTS idx_context_project ON context_items(project_id); CREATE INDEX IF NOT EXISTS idx_file_index_project ON file_index(project_id); CREATE INDEX IF NOT EXISTS idx_file_chunks_file ON file_chunks(file_id); CREATE INDEX IF NOT EXISTS idx_events_project ON agent_events(project_id, created_at); CREATE INDEX IF NOT EXISTS idx_events_session ON agent_events(session_id, created_at); `,
+    );
+  }
+  get connection(): Database.Database {
+    return this.db;
+  }
+  close(): void {
+    this.db.close();
+  }
+}

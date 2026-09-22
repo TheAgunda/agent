@@ -1,0 +1,13 @@
+{
+  "id": "a43a0fc5-968a-49ea-ac35-01b98fa37f74",
+  "goal": "hello world",
+  "createdAt": "2026-09-22T12:25:02.205Z",
+  "updatedAt": "2026-09-22T12:25:02.205Z",
+  "tasks": [
+    {
+      "id": "44bd0853-e9a6-48d8-8324-49ef632e9e6a",
+      "description": "hello world",
+      "status": "pending"
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+import { SQLiteDatabase } from "../storage/sqlite.js";
+import { AgentRepository } from "../storage/repository.js";
 import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -43,8 +45,23 @@ function parseTaskList(raw: string): string[] {
 }
 
 export class Planner {
-  constructor(private readonly projectRoot: string) {}
-
+  private readonly database: SQLiteDatabase;
+  private readonly repository: AgentRepository;
+  private readonly projectId: string;
+  constructor(private readonly projectRoot: string) {
+    this.database = new SQLiteDatabase(projectRoot);
+    this.repository = new AgentRepository(this.database.connection);
+    this.projectId = this.ensureProject();
+  }
+  private ensureProject(): string {
+    const existing = this.repository.getProjectByRoot(this.projectRoot);
+    if (existing) {
+      return existing.id;
+    }
+    const projectName = path.basename(this.projectRoot);
+    console.log()
+    return this.repository.createProject(projectName, this.projectRoot);
+  }
   async createPlan(
     goal: string,
     provider: LLMProvider,
@@ -80,7 +97,7 @@ export class Planner {
           : [{ id: randomUUID(), description: goal, status: "pending" }],
     };
 
-    console.log(plan)
+    console.log(plan);
     this.save(plan);
     return plan;
   }
