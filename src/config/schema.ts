@@ -54,7 +54,7 @@ export interface AgentConfig {
 export const DEFAULT_CONFIG: AgentConfig = {
   model: {
     provider: 'ollama',
-    name: 'qwen3:30b',
+    name: 'qwen2.5:7b',
     baseUrl: 'http://localhost:11434/v1',
     temperature: 0.2,
     maxTokens: 4096,

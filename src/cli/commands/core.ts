@@ -45,7 +45,7 @@ export async function initCommand(cwd: string): Promise<void> {
       type: 'input',
       name: 'name',
       message: 'Model name',
-      default: (a: any) => (a.provider === 'openai' ? 'gpt-4o-mini' : 'qwen3:30b'),
+      default: (a: any) => (a.provider === 'openai' ? 'gpt-4o-mini' : DEFAULT_CONFIG.model.name ),
     },
     {
       type: 'input',
